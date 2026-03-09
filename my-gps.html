@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실시간 번지수 추적기</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000; /* 배터리 절약 및 야간 시인성을 위해 검은 배경 */
+            color: #00FF00; /* 형광 초록색으로 숫자 강조 */
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #number-display {
+            font-size: 30vw; /* 화면 너비의 30% 크기로 숫자 표시 */
+            font-weight: bold;
+            line-height: 1;
+        }
+        #full-address {
+            font-size: 1.2rem;
+            color: #888;
+            margin-top: 20px;
+            text-align: center;
+        }
+        #status {
+            position: absolute;
+            top: 10px;
+            font-size: 0.8rem;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status">GPS 수신 중...</div>
+    <div id="number-display">--</div>
+    <div id="full-address">위치 정보를 불러오는 중입니다.</div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=OAuth 2.0 Client IDs&libraries=places"></script>
+
+    <script>
+        const display = document.getElementById('number-display');
+        const addressText = document.getElementById('full-address');
+        const statusText = document.getElementById('status');
+
+        if (navigator.geolocation) {
+            // 실시간 위치 추적 시작
+            navigator.geolocation.watchPosition(updatePosition, handleError, {
+                enableHighAccuracy: true, // GPS 정밀도 높임
+                maximumAge: 0,
+                timeout: 5000
+            });
+        } else {
+            statusText.innerText = "이 브라우저는 GPS를 지원하지 않습니다.";
+        }
+
+        function updatePosition(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            statusText.innerText = `신호 양호 (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+
+            const geocoder = new google.maps.Geocoder();
+            const latlng = { lat: lat, lng: lng };
+
+            geocoder.geocode({ location: latlng }, (results, status) => {
+                if (status === "OK") {
+                    if (results[0]) {
+                        // 전체 주소 업데이트
+                        addressText.innerText = results[0].formatted_address;
+
+                        // 주소 구성 요소 중 'street_number' (번지수) 찾기
+                        const components = results[0].address_components;
+                        const streetNumber = components.find(c => c.types.includes("street_number"));
+
+                        if (streetNumber) {
+                            display.innerText = streetNumber.long_name;
+                        } else {
+                            display.innerText = "N/A";
+                        }
+                    }
+                } else {
+                    statusText.innerText = "Geocode 실패: " + status;
+                }
+            });
+        }
+
+        function handleError(error) {
+            statusText.innerText = "오류 발생: " + error.message;
+        }
+    </script>
+</body>
+</html>
+
+
+From Note: https://goo.gl/ScG4Hc
